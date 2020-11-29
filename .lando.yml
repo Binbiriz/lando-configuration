@@ -1,0 +1,50 @@
+name: my-lando-app
+recipe: drupal8
+config:
+  webroot: drupal/web
+  php: '7.3'
+  database: mysql:5.7.31
+  xdebug: true
+  conf:
+    php: scripts/lando-customizations/php.ini
+services:
+  appserver:
+    build_as_root:
+      - echo "updating apt" && apt update -y
+      - echo "installing upload progress" && pecl install uploadprogress 2>&1 >/dev/null
+      - docker-php-ext-enable uploadprogress 2>&1 >/dev/null
+      - echo "enabling apache modules" && a2enmod expires headers deflate rewrite 2>&1 >/dev/null
+      - echo "restarting apache" && service apache2 reload 2>&1 >/dev/null
+    build:
+      - composer self-update --1
+      - composer global require hirak/prestissimo
+  mailhog:
+    type: mailhog
+    hogfrom:
+      - appserver
+  pma:
+    type: phpmyadmin
+  varnishcache:
+    type: varnish:4.1
+    backends:
+      - appserver
+    backend_port: 80
+    config:
+      vcl: scripts/lando-customizations/varnish.vcl
+tooling:
+  drush:
+    service: appserver
+    cmd:
+      - "drush --root=/app/drupal"
+  composer:
+    service: appserver
+    cmd:
+      - "php -d memory_limit=-1 /usr/local/bin/composer --working-dir=/app/drupal"
+  csm:
+    service: appserver
+    cmd:
+      - "php -d memory_limit=-1 /app/drupal/vendor/bin/phpcs --standard=/app/drupal/vendor/drupal/coder/coder_sniffer/Drupal,/app/drupal/vendor/drupal/coder/coder_sniffer/DrupalPractice --extensions=php,module,inc,install,test,profile,theme,info,yml,js,css,twig /app/drupal/web/modules/custom/"
+  cst:
+    service: appserver
+    cmd:
+      - "php -d memory_limit=-1 /app/drupal/vendor/bin/phpcs --ignore=node_modules,assets --standard=/app/drupal/vendor/drupal/coder/coder_sniffer/Drupal,/app/drupal/vendor/drupal/coder/coder_sniffer/DrupalPractice --extensions=php,module,inc,install,test,profile,theme,info,yml,js,css,twig /app/drupal/web/themes/custom/"
