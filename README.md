@@ -14,7 +14,7 @@ This will be updated and modified as needed.
 
 ## Modifications
 
-The following modifications and additions have been made to Drupal 8 recipe:
+The following modifications and additions have been made to Drupal 8 recipe. These can be used as a starting point.
 
 1. Custom PHP version
 2. Custom MySQL version
